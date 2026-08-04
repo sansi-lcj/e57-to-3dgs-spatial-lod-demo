@@ -174,6 +174,7 @@ header 和 Gaussian 数量一致；浏览器实机验证过首屏基础层、跨
 
 ## 公开前检查
 
-请先阅读 [`docs/ASSET_POLICY.md`](docs/ASSET_POLICY.md)。当前工作树没有擅自添加代码
-许可证：发布到 GitHub 前，请确认派生场景的公开授权，并由项目所有者选择适合代码的
-LICENSE。Spark、Three.js、Vite 等依赖保留各自许可证；OpenSplat 的 AGPLv3 边界见制作报告。
+请先阅读 [`docs/ASSET_POLICY.md`](docs/ASSET_POLICY.md)。本仓库代码使用
+[MIT License](LICENSE)，但许可证只覆盖本项目代码，不自动授予 P4 派生场景或其他扫描
+数据的公开使用权。Spark、Three.js、Vite 等依赖保留各自许可证；OpenSplat 的 AGPLv3
+边界见制作报告。

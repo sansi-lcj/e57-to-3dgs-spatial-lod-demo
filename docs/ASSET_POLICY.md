@@ -16,7 +16,7 @@ Before making this repository public, confirm that the owner of the scan and all
 content has approved publication. Removing an E57 from the repository does not make a
 derived Gaussian scene anonymous.
 
-The code license has deliberately not been selected in this working tree. Choose and add a
-license before accepting external contributions. Third-party packages retain their own
-licenses; the pipeline report calls out OpenSplat's AGPLv3 boundary and the viewer's MIT
-dependencies.
+The repository code is released under the MIT License in the root `LICENSE` file. That license
+covers the project code only; it does not grant permission to publish or reuse the captured
+scene. Third-party packages retain their own licenses; the pipeline report calls out OpenSplat's
+AGPLv3 boundary and the viewer's MIT dependencies.
