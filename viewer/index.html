@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0d0d" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230a0d0d'/><circle cx='32' cy='32' r='18' fill='%2377e19e'/><circle cx='32' cy='32' r='7' fill='%230a0d0d'/></svg>" />
+    <title>3DGS Spatial LoD · E57 Demo</title>
+  </head>
+  <body>
+    <canvas id="viewport" tabindex="0" aria-label="3D Gaussian Splat 场景"></canvas>
+
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SPATIAL LOD DEMO</p>
+        <h1>3DGS <span>·</span> LoD</h1>
+      </div>
+      <div class="status" role="status" aria-live="polite">
+        <i id="status-dot"></i>
+        <span id="status-text">正在载入场景…</span>
+      </div>
+    </header>
+
+    <aside class="facts" aria-label="场景信息">
+      <div><span>来源</span><strong>E57 + Ultra PLY</strong></div>
+      <div><span>单位</span><strong>米</strong></div>
+      <div><span>采集站</span><strong>19</strong></div>
+      <div><span>模式</span><strong id="mode-label">自由漫游</strong></div>
+      <div><span>Gaussian</span><strong id="splat-count">—</strong></div>
+      <div><span>LoD 分块</span><strong id="tile-status">读取中</strong></div>
+    </aside>
+
+    <div class="controls" aria-label="查看控制">
+      <div class="station-nav" aria-label="观测点书签">
+        <button id="station-previous" type="button" aria-label="上一个观测点">←</button>
+        <label class="station-route">
+          <span>观测点书签</span>
+          <input id="station-slider" type="range" min="0" max="18" value="18" step="1" />
+          <strong id="station-label">19 / 19</strong>
+        </label>
+        <button id="station-next" type="button" aria-label="下一个观测点">→</button>
+      </div>
+      <button id="roam" type="button" aria-pressed="false">进入自由漫游</button>
+      <button id="overview" type="button" aria-pressed="false">模型概览</button>
+      <button id="fullscreen" class="fullscreen" type="button">全屏</button>
+    </div>
+
+    <div class="hint">点击场景进入自由漫游 · 按住鼠标拖动环视 · W/S 前后 · A/D 横移 · Q/E 升降 · Shift 加速 · Esc 退出</div>
+    <div class="crosshair" aria-hidden="true"></div>
+    <div id="error-panel" class="error-panel" hidden></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+*.e57 binary
+*.las binary
+*.laz binary
+*.ply binary
+*.spz binary
+*.png binary
+*.jpg binary
+*.jpeg binary

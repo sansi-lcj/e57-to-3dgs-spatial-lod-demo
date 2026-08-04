@@ -1,0 +1,41 @@
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Local toolchains and generated reconstruction output
+.tools/
+artifacts/
+output/
+.playwright-cli/
+*.log
+
+# Local/private historical notes; the public demo uses the curated P4 report.
+BUILD_REPORT.md
+point-cloud-to-3dgs-research.md
+
+# Source captures and heavyweight training models are never repository assets.
+*.e57
+*.las
+*.laz
+*.pcd
+*.pts
+*.xyz
+*.ply
+
+# JavaScript
+viewer/node_modules/
+viewer/dist/
+
+# Keep the intentionally published, browser-ready SPZ demo package only.
+*.spz
+!viewer/public/lod/**/*.spz

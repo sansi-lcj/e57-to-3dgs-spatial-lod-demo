@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+      - name: Install Python
+        run: uv python install
+      - name: Install project
+        run: uv sync --locked --dev
+      - name: Run tests
+        run: uv run pytest -q -p no:cacheprovider
+
+  viewer:
+    name: Viewer build and asset integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+      - name: Install viewer dependencies
+        working-directory: viewer
+        run: npm ci
+      - name: Validate published LoD assets
+        working-directory: viewer
+        run: npm run validate:lod
+      - name: Build viewer
+        working-directory: viewer
+        run: npm run build

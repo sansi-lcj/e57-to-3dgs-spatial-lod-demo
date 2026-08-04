@@ -1,0 +1,24 @@
+{
+  "name": "e57-3dgs-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "validate:lod": "node scripts/validate-lod.mjs",
+    "convert": "node scripts/convert-spz.mjs",
+    "convert:lod": "node scripts/convert-lod-spz.mjs",
+    "preview": "vite preview"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@sparkjsdev/spark": "2.1.0",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "vite": "6.4.3"
+  }
+}
