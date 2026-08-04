@@ -1,53 +1,108 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0a0d0d" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230a0d0d'/><circle cx='32' cy='32' r='18' fill='%2377e19e'/><circle cx='32' cy='32' r='7' fill='%230a0d0d'/></svg>" />
+    <meta name="theme-color" content="#08100d" />
+    <meta name="description" content="A progressive spatial LoD Gaussian Splat viewer built with Three.js." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2308100d'/><circle cx='32' cy='32' r='18' fill='%2377e19e'/><circle cx='32' cy='32' r='7' fill='%2308100d'/></svg>" />
     <title>3DGS Spatial LoD · E57 Demo</title>
   </head>
   <body>
-    <canvas id="viewport" tabindex="0" aria-label="3D Gaussian Splat 场景"></canvas>
+    <canvas id="viewport" tabindex="0" aria-label="3D Gaussian Splat scene"></canvas>
 
     <header class="topbar">
-      <div>
+      <div class="brand-block">
         <p class="eyebrow">SPATIAL LOD DEMO</p>
         <h1>3DGS <span>·</span> LoD</h1>
+        <p class="subtitle">Progressive capture viewer</p>
       </div>
-      <div class="status" role="status" aria-live="polite">
-        <i id="status-dot"></i>
-        <span id="status-text">正在载入场景…</span>
+      <div class="status-group">
+        <div class="status" role="status" aria-live="polite">
+          <i id="status-dot"></i>
+          <span id="status-text">Loading scene…</span>
+        </div>
+        <button id="help" class="icon-button" type="button" aria-label="Open controls" title="Controls · H">
+          <span aria-hidden="true">?</span>
+        </button>
       </div>
     </header>
 
-    <aside class="facts" aria-label="场景信息">
-      <div><span>来源</span><strong>E57 + Ultra PLY</strong></div>
-      <div><span>单位</span><strong>米</strong></div>
-      <div><span>采集站</span><strong>19</strong></div>
-      <div><span>模式</span><strong id="mode-label">自由漫游</strong></div>
-      <div><span>Gaussian</span><strong id="splat-count">—</strong></div>
-      <div><span>LoD 分块</span><strong id="tile-status">读取中</strong></div>
+    <aside class="facts" aria-label="Scene telemetry">
+      <div class="panel-heading">
+        <span>Scene telemetry</span>
+        <strong id="telemetry-state">CONNECTING</strong>
+      </div>
+      <div class="fact-row"><span>Source</span><strong>E57 · Ultra PLY</strong></div>
+      <div class="fact-row"><span>Coordinate system</span><strong>Metres · Z-up</strong></div>
+      <div class="fact-row"><span>Capture points</span><strong>19 bookmarks</strong></div>
+      <div class="fact-row"><span>Mode</span><strong id="mode-label">Observation</strong></div>
+      <div class="fact-row"><span>Gaussian count</span><strong id="splat-count">—</strong></div>
+      <div class="fact-row"><span>Detail tiles</span><strong id="tile-status">Loading…</strong></div>
+      <div class="fact-row"><span>Resident memory</span><strong id="memory-count">—</strong></div>
+      <div class="memory-meter" role="progressbar" aria-label="Resident memory" aria-valuemin="0" aria-valuemax="64" aria-valuenow="0">
+        <span id="memory-progress"></span>
+      </div>
     </aside>
 
-    <div class="controls" aria-label="查看控制">
-      <div class="station-nav" aria-label="观测点书签">
-        <button id="station-previous" type="button" aria-label="上一个观测点">←</button>
+    <div class="controls" aria-label="Viewer controls">
+      <div class="station-nav" aria-label="Observation bookmarks">
+        <button id="station-previous" class="nav-button" type="button" aria-label="Previous observation point" title="Previous observation point">←</button>
         <label class="station-route">
-          <span>观测点书签</span>
-          <input id="station-slider" type="range" min="0" max="18" value="18" step="1" />
+          <span>Observation point</span>
+          <input id="station-slider" type="range" min="0" max="18" value="18" step="1" aria-label="Observation point" />
           <strong id="station-label">19 / 19</strong>
         </label>
-        <button id="station-next" type="button" aria-label="下一个观测点">→</button>
+        <button id="station-next" class="nav-button" type="button" aria-label="Next observation point" title="Next observation point">→</button>
       </div>
-      <button id="roam" type="button" aria-pressed="false">进入自由漫游</button>
-      <button id="overview" type="button" aria-pressed="false">模型概览</button>
-      <button id="fullscreen" class="fullscreen" type="button">全屏</button>
+      <div class="control-actions">
+        <button id="reset" type="button" title="Reset to the current observation point">Reset view</button>
+        <button id="roam" class="primary-button" type="button" aria-pressed="false">Enter free roam</button>
+        <button id="overview" type="button" aria-pressed="false">Overview</button>
+        <button id="fullscreen" class="fullscreen" type="button">Fullscreen</button>
+      </div>
     </div>
 
-    <div class="hint">点击场景进入自由漫游 · 按住鼠标拖动环视 · W/S 前后 · A/D 横移 · Q/E 升降 · Shift 加速 · Esc 退出</div>
+    <div class="hint" aria-live="polite">
+      <span id="hint-primary">Click the scene to enter free roam</span>
+      <span class="hint-separator">·</span>
+      <span>WASD / arrows move</span>
+      <span class="hint-separator">·</span>
+      <span>H for controls</span>
+    </div>
+
+    <div id="help-dialog" class="help-dialog" hidden>
+      <div class="dialog-backdrop" data-close-help></div>
+      <section class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="help-title" aria-describedby="help-description">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">QUICK GUIDE</p>
+            <h2 id="help-title">Explore the capture</h2>
+          </div>
+          <button id="close-help" class="icon-button dialog-close" type="button" aria-label="Close controls" title="Close controls">×</button>
+        </div>
+        <p id="help-description" class="dialog-intro">Use observation points for reliable reference views, then move freely through the reconstructed space.</p>
+        <div class="shortcut-grid">
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Move forward, left, back and right</span></div>
+          <div><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd><span>Move with the arrow keys</span></div>
+          <div><kbd>Q</kbd><kbd>E</kbd><span>Move down and up</span></div>
+          <div><kbd>Shift</kbd><span>Move faster</span></div>
+          <div><kbd>Drag</kbd><span>Look around while roaming</span></div>
+          <div><kbd>Esc</kbd><span>Exit roam or close this guide</span></div>
+          <div><kbd>R</kbd><span>Reset to the current observation point</span></div>
+          <div><kbd>O</kbd><span>Open the overview camera</span></div>
+        </div>
+        <div class="dialog-note"><span class="note-dot"></span><span>LoD tiles stream in around the camera and are released when you leave the capture area.</span></div>
+      </section>
+    </div>
+
+    <div id="error-panel" class="error-panel" role="alert" hidden>
+      <strong>Scene unavailable</strong>
+      <p id="error-text"></p>
+      <button id="retry" type="button">Retry</button>
+    </div>
+
     <div class="crosshair" aria-hidden="true"></div>
-    <div id="error-panel" class="error-panel" hidden></div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

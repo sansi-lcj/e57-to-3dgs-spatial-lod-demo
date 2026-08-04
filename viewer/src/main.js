@@ -36,14 +36,26 @@ const STATIONS = [
 const canvas = document.querySelector("#viewport");
 const statusText = document.querySelector("#status-text");
 const statusDot = document.querySelector("#status-dot");
+const telemetryState = document.querySelector("#telemetry-state");
 const splatCount = document.querySelector("#splat-count");
 const tileStatus = document.querySelector("#tile-status");
+const memoryCount = document.querySelector("#memory-count");
+const memoryProgress = document.querySelector("#memory-progress");
 const errorPanel = document.querySelector("#error-panel");
+const errorText = document.querySelector("#error-text");
+const retryButton = document.querySelector("#retry");
 const stationSlider = document.querySelector("#station-slider");
 const stationLabel = document.querySelector("#station-label");
+const previousStationButton = document.querySelector("#station-previous");
+const nextStationButton = document.querySelector("#station-next");
+const resetButton = document.querySelector("#reset");
 const overviewButton = document.querySelector("#overview");
 const roamButton = document.querySelector("#roam");
 const modeLabel = document.querySelector("#mode-label");
+const hintPrimary = document.querySelector("#hint-primary");
+const helpButton = document.querySelector("#help");
+const helpDialog = document.querySelector("#help-dialog");
+const closeHelpButton = document.querySelector("#close-help");
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 1, 0.025, 100);
@@ -115,7 +127,14 @@ function setStation(index) {
   camera.updateMatrixWorld();
   stationSlider.value = String(currentStation);
   stationLabel.textContent = `${currentStation + 1} / ${STATIONS.length}`;
+  stationSlider.setAttribute(
+    "aria-valuetext",
+    `Observation point ${currentStation + 1} of ${STATIONS.length}`,
+  );
+  previousStationButton.disabled = currentStation === 0;
+  nextStationButton.disabled = currentStation === STATIONS.length - 1;
   overviewButton.setAttribute("aria-pressed", "false");
+  modeLabel.textContent = "Observation";
 }
 
 function setOverview() {
@@ -123,11 +142,31 @@ function setOverview() {
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld();
   overviewButton.setAttribute("aria-pressed", "true");
+  modeLabel.textContent = "Overview";
 }
 
 function setStatus(message, state = "loading") {
   statusText.textContent = message;
   statusDot.dataset.state = state;
+}
+
+function setTelemetry(state) {
+  telemetryState.textContent = state.toUpperCase();
+}
+
+function updateMemory(loadedBytes, budgetBytes) {
+  const loadedMiB = loadedBytes / 1024 / 1024;
+  const budgetMiB = budgetBytes / 1024 / 1024;
+  const percentage = budgetBytes > 0 ? THREE.MathUtils.clamp(loadedBytes / budgetBytes, 0, 1) * 100 : 0;
+  memoryCount.textContent = `${loadedMiB.toFixed(1)} MiB`;
+  memoryCount.title = `${loadedMiB.toFixed(1)} MiB of ${budgetMiB.toFixed(0)} MiB resident budget`;
+  memoryProgress.style.width = `${percentage}%`;
+  memoryProgress.parentElement.setAttribute("aria-valuenow", loadedMiB.toFixed(1));
+  memoryProgress.parentElement.setAttribute("aria-valuemax", budgetMiB.toFixed(0));
+  memoryProgress.parentElement.setAttribute(
+    "aria-valuetext",
+    `${loadedMiB.toFixed(1)} of ${budgetMiB.toFixed(0)} MiB resident`,
+  );
 }
 
 setStation(currentStation);
@@ -140,26 +179,35 @@ const lodManager = new SpatialLodManager({
   maxLoadedBytes: 64 * 1024 * 1024,
   maxLoadedSplats: 4_000_000,
   onBaseProgress: (event) => {
+    setTelemetry("loading");
     if (event.lengthComputable && event.total > 0) {
       const percentage = Math.round((event.loaded / event.total) * 100);
-      setStatus(`正在载入基础层 ${percentage}%`);
+      setStatus(`Loading base layer · ${percentage}%`);
     }
   },
   onReady: () => {
-    setStatus("基础层已就绪 · 正在细化", "ready");
+    setStatus("Base layer ready · refining view", "ready");
+    setTelemetry("streaming");
     document.body.classList.add("ready");
   },
   onState: (state) => {
-    splatCount.textContent = state.loadedSplats.toLocaleString("zh-CN");
-    splatCount.title = `已加载 ${state.loadedSplats.toLocaleString("zh-CN")} / ${state.totalSplats.toLocaleString("zh-CN")}`;
-    tileStatus.textContent = `${state.loadedTiles} 已载 · ${state.loadingTiles + state.queuedTiles} 待载`;
-    tileStatus.title = `细节分块 ${state.loadedTiles} / ${state.totalAssets}，当前 ${(state.loadedBytes / 1024 / 1024).toFixed(1)} MiB`;
+    const pendingTiles = state.loadingTiles + state.queuedTiles;
+    const loadedSplatLabel = state.loadedSplats.toLocaleString("en-US");
+    const totalSplatLabel = state.totalSplats.toLocaleString("en-US");
+    splatCount.textContent = loadedSplatLabel;
+    splatCount.title = `${loadedSplatLabel} of ${totalSplatLabel} Gaussians loaded`;
+    tileStatus.textContent = `${state.loadedTiles} / ${state.totalAssets}`;
+    tileStatus.title = `${state.loadedTiles} of ${state.totalAssets} detail tiles loaded · ${(state.loadedBytes / 1024 / 1024).toFixed(1)} MiB resident`;
+    updateMemory(state.loadedBytes, state.budgetBytes);
     if (state.failedTiles > 0) {
-      setStatus(`${state.failedTiles} 个细节分块载入失败`, "error");
-    } else if (state.loadingTiles + state.queuedTiles > 0) {
-      setStatus(`场景已就绪 · 正在细化 ${state.loadedTiles}/${state.totalAssets}`, "ready");
+      setTelemetry("error");
+      setStatus(`${state.failedTiles} detail tile(s) failed`, "error");
+    } else if (pendingTiles > 0) {
+      setTelemetry("streaming");
+      setStatus(`Streaming details · ${state.loadedTiles}/${state.totalAssets}`, "ready");
     } else {
-      setStatus(`当前区域细化完成 · ${state.loadedTiles} 块`, "ready");
+      setTelemetry("ready");
+      setStatus(`View refined · ${state.loadedTiles} detail tiles`, "ready");
     }
   },
 });
@@ -168,26 +216,40 @@ lodManager
   .initialize(viewerPointToSource(camera.position), cameraDirectionToSource())
   .catch((error) => {
     console.error(error);
-    setStatus("场景载入失败", "error");
+    setStatus("Scene failed to load", "error");
+    setTelemetry("error");
+    errorText.textContent = `Unable to load the LoD scene: ${error.message}`;
     errorPanel.hidden = false;
-    errorPanel.textContent = `无法载入 LoD 场景：${error.message}`;
   });
 
-document.querySelector("#station-previous").addEventListener("click", () => {
+previousStationButton.addEventListener("click", () => {
+  setRoaming(false);
   setStation(currentStation - 1);
 });
-document.querySelector("#station-next").addEventListener("click", () => {
+nextStationButton.addEventListener("click", () => {
+  setRoaming(false);
   setStation(currentStation + 1);
 });
-stationSlider.addEventListener("input", () => setStation(Number(stationSlider.value)));
-overviewButton.addEventListener("click", setOverview);
+stationSlider.addEventListener("input", () => {
+  setRoaming(false);
+  setStation(Number(stationSlider.value));
+});
+overviewButton.addEventListener("click", () => {
+  setRoaming(false);
+  setOverview();
+});
+resetButton.addEventListener("click", () => {
+  setRoaming(false);
+  setStation(currentStation);
+});
 
 function setRoaming(nextRoaming) {
   roaming = nextRoaming;
   document.body.classList.toggle("roaming", roaming);
   roamButton.setAttribute("aria-pressed", String(roaming));
-  roamButton.textContent = roaming ? "漫游中 · Esc 退出" : "进入自由漫游";
-  modeLabel.textContent = roaming ? "自由漫游中" : "自由漫游";
+  roamButton.textContent = roaming ? "Roaming · Esc to exit" : "Enter free roam";
+  hintPrimary.textContent = roaming ? "Drag to look around" : "Click the scene to enter free roam";
+  modeLabel.textContent = roaming ? "Free roam" : "Observation";
   if (roaming) renderer.domElement.focus();
   else pressedKeys.clear();
 }
@@ -197,43 +259,128 @@ renderer.domElement.addEventListener("click", () => setRoaming(true));
 renderer.domElement.addEventListener("pointerdown", (event) => {
   if (!roaming || event.button !== 0) return;
   draggingLook = true;
+  lastPointer = { x: event.clientX, y: event.clientY };
   renderer.domElement.setPointerCapture(event.pointerId);
 });
 renderer.domElement.addEventListener("pointermove", (event) => {
   if (!roaming || !draggingLook) return;
+  const deltaX = event.movementX || event.clientX - lastPointer.x;
+  const deltaY = event.movementY || event.clientY - lastPointer.y;
+  lastPointer = { x: event.clientX, y: event.clientY };
   lookEuler.setFromQuaternion(camera.quaternion);
-  lookEuler.y -= event.movementX * 0.00156;
-  lookEuler.x -= event.movementY * 0.00156;
+  lookEuler.y -= deltaX * 0.00156;
+  lookEuler.x -= deltaY * 0.00156;
   lookEuler.x = THREE.MathUtils.clamp(lookEuler.x, -Math.PI * 0.472, Math.PI * 0.472);
   camera.quaternion.setFromEuler(lookEuler);
 });
 renderer.domElement.addEventListener("pointerup", (event) => {
   draggingLook = false;
+  lastPointer = null;
   if (renderer.domElement.hasPointerCapture(event.pointerId)) {
     renderer.domElement.releasePointerCapture(event.pointerId);
   }
 });
+renderer.domElement.addEventListener("pointercancel", () => {
+  draggingLook = false;
+  lastPointer = null;
+});
+renderer.domElement.addEventListener("contextmenu", (event) => event.preventDefault());
 document.querySelector("#fullscreen").addEventListener("click", async () => {
   if (document.fullscreenElement) {
     await document.exitFullscreen();
   } else {
-    await document.documentElement.requestFullscreen();
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch (error) {
+      console.warn("Fullscreen is unavailable", error);
+    }
   }
 });
 
 const pressedKeys = new Set();
-const movementKeys = new Set(["w", "a", "s", "d", "q", "e", "shift"]);
+let lastPointer = null;
+const movementKeys = new Set([
+  "w",
+  "a",
+  "s",
+  "d",
+  "q",
+  "e",
+  "shift",
+  "arrowup",
+  "arrowdown",
+  "arrowleft",
+  "arrowright",
+]);
+
+function normalizeKey(key) {
+  return {
+    arrowup: "w",
+    arrowdown: "s",
+    arrowleft: "a",
+    arrowright: "d",
+  }[key] || key;
+}
+
+function isInteractiveTarget(target) {
+  return target instanceof HTMLElement && Boolean(target.closest("button, input, textarea, select, a"));
+}
+
+let lastFocusedElement = null;
+function setHelpOpen(open) {
+  helpDialog.hidden = !open;
+  document.body.classList.toggle("help-open", open);
+  if (open) {
+    setRoaming(false);
+    lastFocusedElement = document.activeElement;
+    closeHelpButton.focus();
+  } else if (lastFocusedElement instanceof HTMLElement) {
+    lastFocusedElement.focus();
+  }
+}
+
+helpButton.addEventListener("click", () => setHelpOpen(true));
+closeHelpButton.addEventListener("click", () => setHelpOpen(false));
+helpDialog.addEventListener("click", (event) => {
+  if (event.target instanceof HTMLElement && event.target.matches("[data-close-help]")) {
+    setHelpOpen(false);
+  }
+});
+retryButton.addEventListener("click", () => window.location.reload());
+
 window.addEventListener("keydown", (event) => {
-  const key = event.key.toLowerCase();
-  if (key === "escape" && roaming) {
+  const rawKey = event.key.toLowerCase();
+  if (!helpDialog.hidden) {
+    if (rawKey === "escape") setHelpOpen(false);
+    return;
+  }
+  if (rawKey === "escape" && roaming) {
     setRoaming(false);
     return;
   }
-  if (!movementKeys.has(key)) return;
-  pressedKeys.add(key);
+  if (isInteractiveTarget(event.target)) return;
+  if (rawKey === "h" || rawKey === "?") {
+    event.preventDefault();
+    setHelpOpen(true);
+    return;
+  }
+  if (rawKey === "r") {
+    event.preventDefault();
+    setRoaming(false);
+    setStation(currentStation);
+    return;
+  }
+  if (rawKey === "o") {
+    event.preventDefault();
+    setRoaming(false);
+    setOverview();
+    return;
+  }
+  if (!movementKeys.has(rawKey)) return;
+  pressedKeys.add(normalizeKey(rawKey));
   if (roaming) event.preventDefault();
 });
-window.addEventListener("keyup", (event) => pressedKeys.delete(event.key.toLowerCase()));
+window.addEventListener("keyup", (event) => pressedKeys.delete(normalizeKey(event.key.toLowerCase())));
 window.addEventListener("blur", () => pressedKeys.clear());
 
 function resize() {
