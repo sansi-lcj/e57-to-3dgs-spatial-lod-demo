@@ -15,6 +15,7 @@ export class SpatialLodManager {
     maxConcurrent = 2,
     maxLoadedBytes = 64 * 1024 * 1024,
     maxLoadedSplats = 4_000_000,
+    fullLoad = false,
     onBaseProgress = () => {},
     onReady = () => {},
     onState = () => {},
@@ -25,6 +26,7 @@ export class SpatialLodManager {
     this.maxConcurrent = maxConcurrent;
     this.maxLoadedBytes = maxLoadedBytes;
     this.maxLoadedSplats = maxLoadedSplats;
+    this.fullLoad = fullLoad;
     this.onBaseProgress = onBaseProgress;
     this.onReady = onReady;
     this.onState = onState;
@@ -90,6 +92,17 @@ export class SpatialLodManager {
     if (!this.manifest) return;
     this.sourcePosition.copy(sourcePosition);
     this.sourceDirection.copy(sourceDirection).normalize();
+
+    if (this.fullLoad) {
+      for (const record of this.records) {
+        record.wanted = true;
+        record.priority = record.levelIndex;
+      }
+      this.pump();
+      this.emitState();
+      return;
+    }
+
     const candidates = [];
     for (const record of this.records) {
       record.distance = distanceToBounds2D(this.sourcePosition, record.asset.bounds);

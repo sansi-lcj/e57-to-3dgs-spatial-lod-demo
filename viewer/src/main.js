@@ -6,6 +6,9 @@ import "./style.css";
 const LOD_MANIFEST_URL =
   import.meta.env.VITE_LOD_MANIFEST_URL ||
   new URL(`${import.meta.env.BASE_URL}lod/manifest.json`, window.location.href).toString();
+const query = new URLSearchParams(window.location.search);
+const fullDetail = query.get("quality") === "full";
+let cleanScreen = query.get("clean") === "1" || query.get("clean") === "true";
 const SOURCE_BOUNDS = {
   min: new THREE.Vector3(-11.0118418, -0.6854115, -1.2702199),
   max: new THREE.Vector3(2.637929, 9.1443319, 3.1349726),
@@ -48,6 +51,12 @@ const stationSlider = document.querySelector("#station-slider");
 const stationLabel = document.querySelector("#station-label");
 const previousStationButton = document.querySelector("#station-previous");
 const nextStationButton = document.querySelector("#station-next");
+const qualityLabel = document.querySelector("#quality-label");
+const qualityModeButton = document.querySelector("#quality-mode");
+const cleanScreenButton = document.querySelector("#clean-screen");
+const memoryMeter = document.querySelector(".memory-meter");
+const lodNote = document.querySelector("#lod-note");
+const subtitle = document.querySelector("#subtitle");
 const resetButton = document.querySelector("#reset");
 const overviewButton = document.querySelector("#overview");
 const roamButton = document.querySelector("#roam");
@@ -56,6 +65,8 @@ const hintPrimary = document.querySelector("#hint-primary");
 const helpButton = document.querySelector("#help");
 const helpDialog = document.querySelector("#help-dialog");
 const closeHelpButton = document.querySelector("#close-help");
+
+document.body.classList.toggle("clean-screen", cleanScreen);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 1, 0.025, 100);
@@ -154,6 +165,46 @@ function setTelemetry(state) {
   telemetryState.textContent = state.toUpperCase();
 }
 
+function updateQualityControls() {
+  qualityLabel.textContent = fullDetail ? "Full detail" : "Progressive";
+  subtitle.textContent = fullDetail ? "Full-detail capture viewer" : "Progressive capture viewer";
+  qualityModeButton.textContent = fullDetail ? "Progressive load" : "Full detail";
+  qualityModeButton.title = fullDetail
+    ? "Reload with adaptive progressive loading"
+    : "Reload with every detail tile loaded from the start";
+  memoryMeter.setAttribute("aria-valuemax", fullDetail ? "128" : "64");
+  lodNote.textContent = fullDetail
+    ? "All 63 detail tiles stay resident for the sharpest view while you roam."
+    : "LoD tiles stream in around the camera and are released when you leave the capture area.";
+}
+
+function navigateWithQuality(nextFullDetail) {
+  const nextQuery = new URLSearchParams(window.location.search);
+  if (nextFullDetail) nextQuery.set("quality", "full");
+  else nextQuery.delete("quality");
+  const search = nextQuery.toString();
+  window.location.href = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+}
+
+function setCleanScreen(nextCleanScreen, updateUrl = true) {
+  cleanScreen = nextCleanScreen;
+  document.body.classList.toggle("clean-screen", cleanScreen);
+  cleanScreenButton.setAttribute("aria-pressed", String(cleanScreen));
+  cleanScreenButton.textContent = cleanScreen ? "Show controls" : "Clean screen";
+  cleanScreenButton.title = cleanScreen ? "Show the viewer controls" : "Hide the viewer controls";
+  if (updateUrl) {
+    const nextQuery = new URLSearchParams(window.location.search);
+    if (cleanScreen) nextQuery.set("clean", "1");
+    else nextQuery.delete("clean");
+    const search = nextQuery.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`,
+    );
+  }
+}
+
 function updateMemory(loadedBytes, budgetBytes) {
   const loadedMiB = loadedBytes / 1024 / 1024;
   const budgetMiB = budgetBytes / 1024 / 1024;
@@ -169,25 +220,44 @@ function updateMemory(loadedBytes, budgetBytes) {
   );
 }
 
+updateQualityControls();
+setCleanScreen(cleanScreen, false);
 setStation(currentStation);
+
+const lodConfig = fullDetail
+  ? {
+      fullLoad: true,
+      maxConcurrent: 4,
+      maxLoadedBytes: 128 * 1024 * 1024,
+      maxLoadedSplats: 7_000_000,
+    }
+  : {
+      fullLoad: false,
+      maxConcurrent: 2,
+      maxLoadedBytes: 64 * 1024 * 1024,
+      maxLoadedSplats: 4_000_000,
+    };
 
 const lodManager = new SpatialLodManager({
   scene,
   manifestUrl: LOD_MANIFEST_URL,
   viewerCenter,
-  maxConcurrent: 2,
-  maxLoadedBytes: 64 * 1024 * 1024,
-  maxLoadedSplats: 4_000_000,
+  ...lodConfig,
   onBaseProgress: (event) => {
     setTelemetry("loading");
     if (event.lengthComputable && event.total > 0) {
       const percentage = Math.round((event.loaded / event.total) * 100);
-      setStatus(`Loading base layer · ${percentage}%`);
+      setStatus(
+        `${fullDetail ? "Loading full detail · base" : "Loading base layer"} · ${percentage}%`,
+      );
     }
   },
   onReady: () => {
-    setStatus("Base layer ready · refining view", "ready");
-    setTelemetry("streaming");
+    setStatus(
+      fullDetail ? "Base layer ready · loading full detail" : "Base layer ready · refining view",
+      "ready",
+    );
+    setTelemetry(fullDetail ? "full load" : "streaming");
     document.body.classList.add("ready");
   },
   onState: (state) => {
@@ -203,11 +273,21 @@ const lodManager = new SpatialLodManager({
       setTelemetry("error");
       setStatus(`${state.failedTiles} detail tile(s) failed`, "error");
     } else if (pendingTiles > 0) {
-      setTelemetry("streaming");
-      setStatus(`Streaming details · ${state.loadedTiles}/${state.totalAssets}`, "ready");
+      setTelemetry(fullDetail ? "full load" : "streaming");
+      setStatus(
+        fullDetail
+          ? `Loading full detail · ${state.loadedTiles}/${state.totalAssets}`
+          : `Streaming details · ${state.loadedTiles}/${state.totalAssets}`,
+        "ready",
+      );
     } else {
       setTelemetry("ready");
-      setStatus(`View refined · ${state.loadedTiles} detail tiles`, "ready");
+      setStatus(
+        fullDetail
+          ? `Full detail ready · ${state.loadedTiles} tiles`
+          : `View refined · ${state.loadedTiles} detail tiles`,
+        "ready",
+      );
     }
   },
 });
@@ -234,6 +314,8 @@ stationSlider.addEventListener("input", () => {
   setRoaming(false);
   setStation(Number(stationSlider.value));
 });
+qualityModeButton.addEventListener("click", () => navigateWithQuality(!fullDetail));
+cleanScreenButton.addEventListener("click", () => setCleanScreen(!cleanScreen));
 overviewButton.addEventListener("click", () => {
   setRoaming(false);
   setOverview();
@@ -359,6 +441,11 @@ window.addEventListener("keydown", (event) => {
     return;
   }
   if (isInteractiveTarget(event.target)) return;
+  if (rawKey === "c") {
+    event.preventDefault();
+    setCleanScreen(!cleanScreen);
+    return;
+  }
   if (rawKey === "h" || rawKey === "?") {
     event.preventDefault();
     setHelpOpen(true);

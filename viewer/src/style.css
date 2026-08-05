@@ -66,6 +66,23 @@ body.roaming #viewport:active {
   cursor: grabbing;
 }
 
+body.clean-screen .topbar,
+body.clean-screen .facts,
+body.clean-screen .controls,
+body.clean-screen .hint,
+body.clean-screen .crosshair {
+  display: none;
+}
+
+body.clean-screen #viewport {
+  cursor: none;
+}
+
+body.clean-screen.roaming #viewport,
+body.clean-screen.roaming #viewport:active {
+  cursor: none;
+}
+
 .topbar,
 .facts,
 .controls,
@@ -268,11 +285,13 @@ h2 span {
 }
 
 .station-nav,
+.display-actions,
 .control-actions {
   pointer-events: auto;
 }
 
 .station-nav,
+.display-actions,
 .control-actions {
   display: flex;
   align-items: stretch;
@@ -374,6 +393,15 @@ input:focus-visible {
 .primary-button {
   border-color: rgba(119, 225, 158, 0.42);
   background: rgba(25, 70, 47, 0.84);
+}
+
+.display-actions {
+  margin-inline: auto;
+}
+
+.mode-button {
+  border-color: rgba(119, 225, 158, 0.32);
+  background: var(--accent-soft);
 }
 
 .hint {
@@ -588,16 +616,22 @@ kbd {
   }
 
   .station-nav,
+  .display-actions,
   .control-actions {
     width: 100%;
   }
 
+  .display-actions,
   .control-actions button {
     flex: 1;
   }
 
+  .display-actions button {
+    flex: 1;
+  }
+
   .hint {
-    bottom: 160px;
+    bottom: 210px;
   }
 }
 
@@ -635,6 +669,11 @@ kbd {
     gap: 6px;
   }
 
+  .display-actions button {
+    padding-inline: 7px;
+    font-size: 11px;
+  }
+
   .station-route {
     grid-template-columns: minmax(90px, 1fr) auto;
     min-width: 0;
@@ -647,7 +686,7 @@ kbd {
 
   .hint {
     right: 18px;
-    bottom: 158px;
+    bottom: 210px;
     left: 18px;
     justify-content: center;
     overflow: hidden;

@@ -52,7 +52,11 @@ CDN 需要允许当前网页 Origin 的 CORS 请求，并保持 manifest 中的�
 - 点击场景或 `Enter free roam` 后，鼠标拖动环视；`W/S` 前后，`A/D` 横移，`Q/E` 升降，
   `Shift` 加速，`Esc` 退出；方向键也可移动。
 - `Reset view` 返回当前观测点，`Overview` 查看整体范围，`R` / `O` 是对应快捷键，`H` 打开
-  `Quick Guide`。
+  `Quick Guide`；`C` 切换清屏模式。
+- 默认地址使用空间 LoD 渐进加载；点击 `Full detail`，或打开
+  `?quality=full`，会从基础层开始加载全部 63 个细节分块（约 100 MB / 6,201,720 Gaussian）。
+- `?clean=1` 打开无 HUD 的清屏版本；演示时可以组合为
+  `?quality=full&clean=1`，得到全量精细、无界面的版本。
 - 19 个采集站是观测书签，不是移动限制；相机可以在站点之间连续移动，也可以离开点云
   覆盖区。
 - 离开有效覆盖区时，细节分块会被回收，只留下基础层；回到场景后按需重新加载。
@@ -72,6 +76,7 @@ CDN 需要允许当前网页 Origin 的 CORS 请求，并保持 manifest 中的�
 - 首屏基础层：5,153,904 bytes（约 4.92 MiB），相比单体 SPZ 减少 94.96%；
 - 最大单个细节块：3,809,044 bytes；
 - 默认驻留预算：64 MiB / 4,000,000 Gaussian，最多 2 个并发加载；
+- Full detail 模式预算：128 MiB / 7,000,000 Gaussian，最多 4 个并发加载，确保全量细节不被空间 LoD 回收；
 - SPZ 使用 SH3、12-bit fractional coordinate，manifest 对每个文件记录 SHA-256、字节数、
   splat 数和 SPZ header。
 

@@ -15,7 +15,7 @@
       <div class="brand-block">
         <p class="eyebrow">SPATIAL LOD DEMO</p>
         <h1>3DGS <span>·</span> LoD</h1>
-        <p class="subtitle">Progressive capture viewer</p>
+        <p id="subtitle" class="subtitle">Progressive capture viewer</p>
       </div>
       <div class="status-group">
         <div class="status" role="status" aria-live="polite">
@@ -37,6 +37,7 @@
       <div class="fact-row"><span>Coordinate system</span><strong>Metres · Z-up</strong></div>
       <div class="fact-row"><span>Capture points</span><strong>19 bookmarks</strong></div>
       <div class="fact-row"><span>Mode</span><strong id="mode-label">Observation</strong></div>
+      <div class="fact-row"><span>Load profile</span><strong id="quality-label">Progressive</strong></div>
       <div class="fact-row"><span>Gaussian count</span><strong id="splat-count">—</strong></div>
       <div class="fact-row"><span>Detail tiles</span><strong id="tile-status">Loading…</strong></div>
       <div class="fact-row"><span>Resident memory</span><strong id="memory-count">—</strong></div>
@@ -55,6 +56,10 @@
         </label>
         <button id="station-next" class="nav-button" type="button" aria-label="Next observation point" title="Next observation point">→</button>
       </div>
+      <div class="display-actions" aria-label="Display presets">
+        <button id="quality-mode" class="mode-button" type="button" title="Switch to full-detail loading">Full detail</button>
+        <button id="clean-screen" type="button" aria-pressed="false" title="Hide the viewer controls">Clean screen</button>
+      </div>
       <div class="control-actions">
         <button id="reset" type="button" title="Reset to the current observation point">Reset view</button>
         <button id="roam" class="primary-button" type="button" aria-pressed="false">Enter free roam</button>
@@ -68,7 +73,7 @@
       <span class="hint-separator">·</span>
       <span>WASD / arrows move</span>
       <span class="hint-separator">·</span>
-      <span>H for controls</span>
+      <span>C clean · H controls</span>
     </div>
 
     <div id="help-dialog" class="help-dialog" hidden>
@@ -91,8 +96,9 @@
           <div><kbd>Esc</kbd><span>Exit roam or close this guide</span></div>
           <div><kbd>R</kbd><span>Reset to the current observation point</span></div>
           <div><kbd>O</kbd><span>Open the overview camera</span></div>
+          <div><kbd>C</kbd><span>Toggle clean screen</span></div>
         </div>
-        <div class="dialog-note"><span class="note-dot"></span><span>LoD tiles stream in around the camera and are released when you leave the capture area.</span></div>
+        <div class="dialog-note"><span class="note-dot"></span><span id="lod-note">LoD tiles stream in around the camera and are released when you leave the capture area.</span></div>
       </section>
     </div>
 
